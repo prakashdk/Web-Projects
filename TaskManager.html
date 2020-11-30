@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Task Manager</title>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+ 	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+</head>
+<style type="text/css">
+	*{
+		text-align: center;
+	}
+	audio{
+		outline: 0;
+		border: 1px solid black;
+		border-radius: 25px;
+	}
+	#delete{
+		float: right;
+	}
+
+</style>
+<body class="container">
+	<audio id="audio" src="F:\Sounds\Master.mp3"></audio>
+	<h1>Music</h1>
+	<button class="btn btn-success" onclick="play()">Play</button>
+	<button class="btn btn-warning" onclick="pause()">Pause</button>
+	<button class="btn btn-danger" onclick="stop()">Stop</button>
+	<hr></hr>
+	<h1>Record</h1>
+	<button class="btn btn-success" id="recordStart">Start</button>
+	<button class="btn btn-danger" id="recordStop">Stop</button>
+	<hr></hr>
+	<h1>Tasks</h1>
+	<button class="btn btn-info" onclick="playAll()">Stop</button><br><br>
+	<div id="soundClips"></div>
+	<hr></hr>
+</body>
+<script type="text/javascript">
+	var music=document.getElementById('audio');
+	var audio = document.getElementById('records');
+	var tasks=[];
+	var time=[];
+	var interval=setInterval(function(){
+		var d=new Date();
+		var curHrs=d.getHours();
+		var curMins=d.getMinutes();
+		for (var i = 0; i < time.length; i++) {
+			if(time[i]!=="invalid"){
+				var hm=time[i].split(" ");
+				if (format(hm[0])===curHrs.toString()&&format(hm[1])===curMins.toString()) {
+					tasks[i].play();
+					//For 1 time play
+					/*
+					time[i]="invalid";
+					*/
+				}
+			}
+		}
+	},1000);
+	function playAll() {
+		for (var i = 0; i < tasks.length; i++) {
+			tasks[i].pause();
+			tasks[i].currentTime=0;
+		}
+	}
+	function play() {
+		music.play();
+	}
+	function pause() {
+		music.pause();
+	}
+	function stop() {
+		music.pause();
+		music.currentTime=0;
+	}
+	if (navigator.mediaDevices) {
+  //console.log('getUserMedia supported.');
+
+  var constraints = { audio: true };
+  var chunks = [];
+
+  navigator.mediaDevices.getUserMedia(constraints)
+  .then(function(stream) {
+
+    var mediaRecorder = new MediaRecorder(stream);
+
+    let record=document.getElementById('recordStart');
+    let stop=document.getElementById('recordStop');
+
+    record.onclick = function() {
+      mediaRecorder.start();
+      console.log(mediaRecorder.state);
+      console.log("recorder started");
+      record.classList.remove("btn");
+      record.classList.remove("btn-success");
+      record.classList.add("btn");
+      record.classList.add("btn-warning");
+    }
+
+    stop.onclick = function() {
+      mediaRecorder.stop();
+      console.log(mediaRecorder.state);
+      console.log("recorder stopped");
+      record.classList.remove("btn");
+      record.classList.remove("btn-warning");
+      record.classList.add("btn");
+      record.classList.add("btn-success");
+    }
+    
+
+    mediaRecorder.onstop = function(e) {
+      //console.log("data available after MediaRecorder.stop() called.");
+      var clipName = prompt('Enter a name for your sound clip');
+      clipName=clipName.length>0?clipName:"Clip N";
+      var playTime = prompt('Enter a time to play \n Mention am/pm');
+      var absTime=getApproxTime(playTime);
+      var status=(absTime==="invalid"?"unavailable":"available");
+      var color=(absTime==="invalid"?"red":"green");
+      /*while(absTime!=="invalid"){
+      	alert("invalid time :( , Re Enter it")
+      	playTime = prompt('Enter a time to play');
+      	absTime=getApproxTime(playTime);
+      }*/
+
+      var soundClips=document.getElementById('soundClips');
+      var clipContainer = document.createElement('div');
+      var clipLabel = document.createElement('p');
+      var audio = document.createElement('audio');
+      var deleteButton = document.createElement('button');
+     
+      audio.setAttribute('controls', '');
+      deleteButton.innerHTML = "Delete";
+      deleteButton.classList.add('btn');
+      deleteButton.classList.add('btn-danger');
+      audio.classList.add('audio');
+      deleteButton.id="delete";
+      clipContainer.classList.add('jumbotron');
+
+      clipLabel.innerHTML = "Name :<b>"+clipName+"&nbsp&nbsp&nbsp&nbsp&nbsp</b>Time :<b>"+playTime+"</b>&nbsp&nbsp&nbsp&nbsp&nbspStatus :<i style='color:"+color+"'>"+status+"</i>";
+
+	  clipContainer.appendChild(clipLabel);
+      clipContainer.appendChild(audio);
+      clipContainer.appendChild(deleteButton);
+      soundClips.appendChild(clipContainer);
+
+      audio.controls = true;
+      var blob = new Blob(chunks, { 'type' : 'audio/ogg; codecs=opus' });
+      chunks = [];
+
+      console.log("recorder stopped");
+      var audioURL = window.URL.createObjectURL(blob);
+      audio.src = audioURL;
+      tasks.push(audio);
+      time.push(absTime);
+
+      deleteButton.onclick = function(e) {
+        evtTgt = e.target;
+        evtTgt.parentNode.parentNode.removeChild(evtTgt.parentNode);
+      }
+    }
+
+    mediaRecorder.ondataavailable = function(e) {
+      chunks.push(e.data);
+      
+      //console.log(chunks);
+    }
+  })
+  .catch(function(err) {
+    console.log('The following error occurred: ' + err);
+  })
+}
+function getApproxTime(time){
+	var hrs="00";
+	var mins="00";
+	time=time.toLowerCase();
+	if (time.includes(":")) {
+		var a=time.indexOf(":");
+		if(a-2>=0){
+			hrs=time.substring(a-2,a);
+		}
+		else{
+			hrs=time.substring(a-1,a);	
+		}
+		if(a+2<time.length){
+			mins=time.substring(a+1,a+3);
+		}
+		else{
+			mins=time.substring(a+1,a+2);
+		}
+
+		hrs=hrs.trim();
+		mins=mins.trim();
+	}
+	else{
+		var a=time.split(" ");
+		if(a.length>=2){
+			if(numCount(a)>=2){
+				hrs=a[a.length-3];
+				mins=a[a.length-2];
+			}
+			else{
+				hrs=a[a.length-2];
+				mins="00";
+			}
+		}
+		
+	}
+	if (time.includes("pm")) {
+		hrs=12+parseInt(hrs);
+		if(hrs>=24){
+			hrs="00";
+		}
+		return hrs+" "+mins;	
+		}
+	else if(time.includes("am")) {
+		return hrs+" "+mins;
+	}
+	return "invalid";
+
+}
+
+function numCount(a){
+	var c=0;
+	for (var i = 0; i < a.length; i++) {
+		if(isInt(a[i])){
+			c++;
+		}
+	}
+	return c;
+}
+function isInt(a){	
+	var p=parseInt(a);
+	return Number.isInteger(p);
+}
+function format(a){
+	return a.length===1?"0"+a:a;
+}
+</script>
+</html>
